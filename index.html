@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Snake Game - A classic arcade game built with Phaser 3">
+<title>Snake Game</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+<header class="p-4 bg-gray-800">
+<h1 class="text-3xl font-bold text-center">Snake Game</h1>
+</header>
+<main class="container mx-auto p-4">
+<section class="flex justify-center items-center">
+<div id="game-container" class="relative">
+<canvas id="game"></canvas>
+<div id="score" class="absolute top-4 left-4 text-xl font-bold"></div>
+</div>
+</section>
+</main>
+<script>
+    const config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        parent: 'game-container',
+        canvas: document.getElementById('game'),
+        physics: {
+            default: 'arcade',
+            arcade: {
+                debug: false
+            }
+        },
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        }
+    };
+
+    const game = new Phaser.Game(config);
+
+    let snake;
+    let food;
+    let cursors;
+    let score = 0;
+    let scoreText;
+    let gameOver = false;
+    let direction = 'right';
+    let snakeBody = [];
+
+    function preload() {
+        this.load.setBaseURL('');
+    }
+
+    function create() {
+        cursors = this.input.keyboard.createCursorKeys();
+        snake = this.add.rectangle(400, 300, 16, 16, 0x00ff00);
+        food = this.add.rectangle(200, 200, 16, 16, 0xff0000);
+        
+        scoreText = document.getElementById('score');
+        scoreText.textContent = `Score: ${score}`;
+
+        this.time.addEvent({
+            delay: 100,
+            callback: moveSnake,
+            callbackScope: this,
+            loop: true
+        });
+    }
+
+    function update() {
+        if (gameOver) return;
+
+        if (cursors.left.isDown && direction !== 'right') {
+            direction = 'left';
+        } else if (cursors.right.isDown && direction !== 'left') {
+            direction = 'right';
+        } else if (cursors.up.isDown && direction !== 'down') {
+            direction = 'up';
+        } else if (cursors.down.isDown && direction !== 'up') {
+            direction = 'down';
+        }
+
+        checkCollision();
+    }
+
+    function moveSnake() {
+        if (gameOver) return;
+
+        let newX = snake.x;
+        let newY = snake.y;
+
+        switch (direction) {
+            case 'left':
+                newX -= 16;
+                break;
+            case 'right':
+                newX += 16;
+                break;
+            case 'up':
+                newY -= 16;
+                break;
+            case 'down':
+                newY += 16;
+                break;
+        }
+
+        snakeBody.unshift({ x: snake.x, y: snake.y });
+        if (snakeBody.length > score) {
+            snakeBody.pop();
+        }
+
+        snake.x = newX;
+        snake.y = newY;
+
+        if (snake.x < 0 || snake.x > 800 || snake.y < 0 || snake.y > 600) {
+            endGame();
+        }
+    }
+
+    function checkCollision() {
+        const distance = Phaser.Math.Distance.Between(snake.x, snake.y, food.x, food.y);
+        
+        if (distance < 16) {
+            score += 10;
+            scoreText.textContent = `Score: ${score}`;
+            repositionFood();
+        }
+
+        for (let i = 0; i < snakeBody.length; i++) {
+            if (snake.x === snakeBody[i].x && snake.y === snakeBody[i].y) {
+                endGame();
+            }
+        }
+    }
+
+    function repositionFood() {
+        food.x = Math.floor(Math.random() * 50) * 16;
+        food.y = Math.floor(Math.random() * 37) * 16;
+    }
+
+    function endGame() {
+        gameOver = true;
+        const gameOverText = this.add.text(400, 300, 'Game Over\nPress Space to Restart', {
+            fontSize: '32px',
+            fill: '#fff',
+            align: 'center'
+        }).setOrigin(0.5);
+
+        this.input.keyboard.once('keydown-SPACE', () => {
+            this.scene.restart();
+            score = 0;
+            gameOver = false;
+            direction = 'right';
+            snakeBody = [];
+        });
+    }
+    </script>
+<footer class="fixed bottom-0 w-full p-4 bg-gray-800 text-center">
+<p>Use arrow keys to control the snake. Collect red food to grow and score points!</p>
+</footer>
+</body>
+</html>
